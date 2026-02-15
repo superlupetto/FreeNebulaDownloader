@@ -11,7 +11,7 @@ MUSIC_DIR = os.path.join(BASE_DIR, "Musica")
 VIDEO_DIR = os.path.join(BASE_DIR, "Video")
 FFMPEG_ROOT = r"C:\FFmpeg"
 FFMPEG_EXE = os.path.join(FFMPEG_ROOT, "bin", "ffmpeg.exe")
-UPDATE_URL = "http://lunaremagicafata.duckdns.org/SuperDownloader.py"
+UPDATE_URL = "https://github.com/superlupetto/SuperDownloader/blob/main/SuperDownloader.py"
 FF_URL = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl-shared.zip"
 SCRIPT_PATH = os.path.abspath(__file__)
 
@@ -92,18 +92,29 @@ def download(url, mode='video'):
         print(f"❌ Errore download: {e}")
 
 def update_script():
-    """Scarica l'ultima versione del file .py dal tuo server"""
-    print(f"\nControllo aggiornamenti su: {UPDATE_URL}")
+    print(f"\n[INFO] Controllo aggiornamenti su GitHub...")
     try:
+        # User-Agent necessario per non essere bloccati dai server
+        req = urllib.request.Request(UPDATE_URL, headers={'User-Agent': 'Mozilla/5.0'})
         temp_file = SCRIPT_PATH + ".new"
-        urllib.request.urlretrieve(UPDATE_URL, temp_file)
+        
+        with urllib.request.urlopen(req) as response, open(temp_file, 'wb') as out_file:
+            out_file.write(response.read())
+            
         if os.path.exists(temp_file):
+            print(">>> Aggiornamento scaricato. Riavvio in corso...")
+            # Crea un file batch temporaneo per sostituire il file in uso
             with open("update.bat", "w") as f:
-                f.write(f'@echo off\ntimeout /t 1 >nul\nmove /y "{temp_file}" "{SCRIPT_PATH}"\nstart python "{SCRIPT_PATH}"\ndel "%~f0"')
+                f.write(f'''@echo off
+timeout /t 1 >nul
+move /y "{temp_file}" "{SCRIPT_PATH}"
+start python "{SCRIPT_PATH}"
+del "%~f0"''')
             subprocess.Popen("update.bat", shell=True)
             sys.exit()
     except Exception as e:
-        print(f"❌ Server Offline o Errore: {e}")
+        print(f"❌ Errore durante l'aggiornamento: {e}")
+        input("Premi Invio per tornare al menu...")
 
 def main():
     inizializza()
