@@ -34,19 +34,30 @@ yt-dlp: Installabile tramite lo script stesso o con:
 
 
 🚀 Installazione e Uso
+
 Copia il file yt.py nella tua cartella di lavoro.
+
 Apri il terminale o il CMD.
+
 Avvia lo script:
-bash
+
 python yt.py
+
 Usa il codice con cautela.
 
+
 Scegli l'opzione dal menu e incolla l'URL del video.
+
 ⚙️ Risoluzione Problemi (FAQ)
+
 Errore FFmpeg: Se ricevi un avviso relativo a FFmpeg, lo script tenterà di installarlo. Assicurati di eseguire lo script come Amministratore la prima volta per permettere la creazione delle cartelle in C:\.
+
 Velocità Lenta: Assicurati di aggiornare regolarmente yt-dlp tramite l'opzione [3] del menu per superare i limiti di banda imposti dai server.
+
 Siti Supportati: Oltre a YouTube, puoi scaricare da Vimeo, Facebook, Instagram, Twitter e molti altri. Consulta la lista completa yt-dlp.
+
 📄 Licenza
+
 Creato per uso personale e didattico. Rispetta sempre i termini di servizio delle piattaforme e il copyright degli autori.
 
 
