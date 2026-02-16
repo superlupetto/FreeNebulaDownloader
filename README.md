@@ -120,10 +120,6 @@ Installazione Python
 
 Scaricabile da:
 
-Microsoft Store
-
-Sito ufficiale python.org
-
 📦 Dipendenze
 
 Gestite automaticamente dallo script:
@@ -194,7 +190,6 @@ Selezione bitrate personalizzata
 Naming automatico intelligente
 
 🛡️ Supporto & Community
-Discord Ufficiale
 
 Discord Ufficiale: Unisciti [qui](Discord.gg/vQACqKnysB)
 
@@ -217,14 +212,6 @@ Questo software è fornito a scopo educativo e personale.
 L’utente è responsabile dell’uso conforme alle leggi vigenti e ai termini di servizio delle piattaforme da cui effettua il download.
 
 ⭐ Se ti piace il progetto
-
-Condividilo
-
-Contribuisci con idee o miglioramenti
-
-Se vuoi, posso anche prepararti:
-
-Versione inglese internazionale
 
 ---
 
