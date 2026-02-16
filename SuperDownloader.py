@@ -12,8 +12,8 @@ MUSIC_DIR = os.path.join(BASE_DIR, "Musica")
 VIDEO_DIR = os.path.join(BASE_DIR, "Video")
 FFMPEG_ROOT = r"C:\FFmpeg"
 FFMPEG_EXE = os.path.join(FFMPEG_ROOT, "bin", "ffmpeg.exe")
-UPDATE_URL = "http://lunaremagicafata.duckdns.org"
-FF_URL = "https://github.com"
+UPDATE_URL = "http://lunaremagicafata.duckdns.org/downloads/SuperDownloader.py"
+FF_URL = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl-shared.zip"
 SCRIPT_PATH = os.path.abspath(__file__)
 
 LANGS = {
@@ -110,3 +110,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
