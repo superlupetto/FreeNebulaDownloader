@@ -134,7 +134,7 @@ Aprire CMD o PowerShell nella cartella del file
 
 Eseguire:
 
-python FreeNebulaDownloader.py
+python FreeSuperDownloader.py
 
 Selezionare la lingua al primo avvio
 
