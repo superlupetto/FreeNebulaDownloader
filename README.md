@@ -1,62 +1,61 @@
+# 🚀 Super Downloader Pro V1.9.2
 
-                                                                                 # SuperDownloader
+Un potente strumento basato su **Python** e **yt-dlp** per il download e la conversione di contenuti multimediali. Progettato per essere semplice, multilingue e completamente automatizzato.
 
-🚀 Super Downloader Python V1.9.1
+---
 
-Un potente strumento basato su Python e yt-dlp per scaricare video e musica da YouTube (e oltre 1000 altri siti) alla massima qualità possibile. Sostituisce la vecchia versione .bat con una logica più solida e un'installazione automatizzata.
+## ✨ Caratteristiche Principali
 
-✨ Caratteristiche
+*   🎵 **Download MP3**: Estrazione audio di alta qualità (192kbps).
+*   🎬 **Download MP4**: Video in alta risoluzione (fino a 4K) con merge automatico.
+*   🔄 **Conversione Locale**: Trasforma i tuoi video salvati in MP3 con un clic.
+*   🌍 **Multilingua**: Supporto integrato per:
+    *   Italiano, English, 日本語 (Giapponese), Dansk, Français, Hrvatski, Čeština, Türkçe, हिन्दी (Hindi).
+*   🛠️ **Auto-Setup**: 
+    *   Configurazione automatica delle cartelle in `C:\Super Downloader`.
+    *   Installazione automatica di **FFmpeg** (BtbN Builds) se mancante.
+*   📡 **Aggiornamenti**: Sistema di auto-update per lo script e la libreria `yt-dlp`.
 
-Audio MP3: Estrazione automatica dell'audio a 192kbps.
+---
 
-Video MP4: Download in alta risoluzione (1080p, 2K, 4K) con merge automatico.
+## 📂 Struttura del Sistema
 
-Auto-Configurazione: Crea automaticamente le cartelle in C:\Super Downloader.
+Lo script organizza i file in percorsi predefiniti per la massima pulizia:
 
-Auto-FFmpeg: Se FFmpeg non viene trovato in C:\FFmpeg\bin, lo script lo scarica e lo configura da solo.
+*   **Musica**: `C:\Super Downloader\Musica`
+*   **Video**: `C:\Super Downloader\Video`
+*   **Configurazione**: `C:\Super Downloader\config.txt` (Salva la tua lingua)
+*   **Motore Core**: `C:\FFmpeg\bin`
 
+---
 
-Sempre Aggiornato: Funzione integrata per aggiornare il "motore" yt-dlp e pip.
+## 🚀 Requisiti e Installazione
 
-📂 Struttura delle Cartelle
+1.  **Python 3.10+**: Scaricabile dal [Sito Ufficiale Python](https://www.python.org) o dal Microsoft Store.
+2.  **yt-dlp**: Viene installato automaticamente al primo avvio.
+3.  **FFmpeg**: Viene scaricato e configurato automaticamente dallo script.
 
-Lo script organizza i file in percorsi fissi per evitare confusione:
+### Come avviarlo:
+1.  Salva il codice come `SuperDownloader.py`.
+2.  Apri il terminale nella cartella del file.
+3.  Esegui il comando:
+    ```bash
+    python SuperDownloader.py
+    ```
 
-C:\Super Downloader\Musica -> Per i tuoi file .mp3
+---
 
-C:\Super Downloader\Video -> Per i tuoi file .mp4
+## ⚙️ Menu Opzioni
 
-C:\FFmpeg\bin -> Sede dei binari necessari per la conversione.
+1.  **Scarica MP3**: Incolla il link di YouTube per ottenere l'audio.
+2.  **Scarica MP4**: Incolla il link per ottenere il video completo.
+3.  **Converti Locali**: Converte tutti i file in `...\Video` in MP3 salvandoli in `...\Musica`.
+4.  **Aggiorna Script**: Scarica l'ultima versione dal server.
+5.  **Aggiorna yt-dlp**: Aggiorna il motore di download per superare i blocchi di YouTube.
+6.  **Lingua**: Resetta la scelta della lingua.
+7.  **Esci**: Chiude il programma.
 
-🛠️ Requisiti
-
-Python 3.10+: Scaricabile dal Sito Ufficiale Python o dal Microsoft Store.
-
-yt-dlp: Installabile tramite lo script stesso o con:
-
-
-🚀 Installazione e Uso
-
-Copia il file SuperDownloader.py nella tua cartella di lavoro.
-
-Apri il terminale o il CMD.
-
-Avvia lo script:
-
-python SuperDownloader.py
-
-Usa il codice con cautela.
-
-
-Scegli l'opzione dal menu e incolla l'URL del video.
-
-⚙️ Risoluzione Problemi (FAQ)
-
-Errore FFmpeg: Se ricevi un avviso relativo a FFmpeg, lo script tenterà di installarlo. Assicurati di eseguire lo script come Amministratore la prima volta per permettere la creazione delle cartelle in C:\.
-
-Velocità Lenta: Assicurati di aggiornare regolarmente yt-dlp tramite l'opzione [3] del menu per superare i limiti di banda imposti dai server.
-
-Siti Supportati: Oltre a YouTube, puoi scaricare da Vimeo, Facebook, Instagram, Twitter e molti altri. Consulta la lista completa yt-dlp.
+---
 
 📄 Licenza
 
