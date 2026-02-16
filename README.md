@@ -1,7 +1,9 @@
-<img width="365" height="231" alt="image" src="https://github.com/user-attachments/assets/f79a36bd-a0c4-4d87-848a-cb53b828b4b8" />
 
+                                                                                 # SuperDownloader
 
-# SuperDownloader
+<img width="262" height="88" alt="Screenshot 2026-02-16 080717" src="https://github.com/user-attachments/assets/9bcb5e74-0282-4769-9b47-6c8adecd99b5" />
+
+<img width="269" height="180" alt="Screenshot 2026-02-16 080705" src="https://github.com/user-attachments/assets/51252bb8-2c8e-4991-8c08-afad0e2feafa" />
 
 🚀 Super Downloader Python V1.6
 
@@ -16,6 +18,7 @@ Video MP4: Download in alta risoluzione (1080p, 2K, 4K) con merge automatico.
 Auto-Configurazione: Crea automaticamente le cartelle in C:\Super Downloader.
 
 Auto-FFmpeg: Se FFmpeg non viene trovato in C:\FFmpeg\bin, lo script lo scarica e lo configura da solo.
+
 
 Sempre Aggiornato: Funzione integrata per aggiornare il "motore" yt-dlp e pip.
 
