@@ -22,4 +22,39 @@ Un potente downloader da terminale in Python per scaricare audio e video da inte
 ## 📁 Struttura cartelle
 
 Il programma crea automaticamente:
-C://FreeSuperDownloader
+C:\FreeSuperDownloader
+│
+├── Musica\ # File MP3
+├── Video\ # File video
+├── log.txt # Log errori
+└── config.txt # Lingua selezionata
+
+---
+
+## 🧰 Requisiti
+
+- Python 3.x
+- Connessione Internet
+- Windows (ottimizzato per)
+
+Le dipendenze vengono installate automaticamente:
+- `yt-dlp`
+- `FFmpeg` (download automatico)
+
+---
+
+## ▶️ Utilizzo
+
+Avvia lo script:
+
+```bash
+python FreeSuperDownloader.py
+
+Download MP3 / MP4
+Seleziona opzione 1 o 2
+Incolla il link
+Premi INVIO
+Il download parte automaticamente
+
+👉 Modalità continua: inserisci più link senza riavviare
+👉 Premi X per tornare al menu
