@@ -1,4 +1,4 @@
-# 🎬 Super Downloader Pro v2.8
+# 🎬 Super Downloader Pro v2.9
 
 Un potente downloader da terminale in Python per scaricare audio e video da internet (YouTube e altri siti supportati da yt-dlp).
 
