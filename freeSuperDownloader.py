@@ -686,7 +686,7 @@ def main():
     while True:
         clear_screen()
         print("===========================================")
-        print("      SUPER DOWNLOADER PRO V2.8")
+        print("      SUPER DOWNLOADER PRO V2.9")
         print("===========================================")
         for i in range(1, 9):
             print(f" [{i}] -> {L[f'opt{i}']}")
