@@ -249,7 +249,7 @@ def aggiorna_ytdlp(L):
 
 def download_loop(L):
     # Modalità predefinita: MP4 (H.264/AAC)
-    mode = "mp4"
+    mode = "mp3"
     
     while True:
         clear_screen()
