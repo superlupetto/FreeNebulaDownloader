@@ -275,7 +275,7 @@ c.create_oval(45,5,55,15,fill="#28c840",outline="")
 
 Label(header, text="FreeSuperDownloader", font=("Segoe UI", 22, "bold"), bg="#0b1220", fg="white").pack()
 
-version = Label(header, text="v2.1", bg="#0b1220", fg="#94a3b8", font=("Segoe UI", 9))
+version = Label(header, text="v2.2", bg="#0b1220", fg="#94a3b8", font=("Segoe UI", 9))
 version.place(relx=1.0, x=-10, y=5, anchor="ne")
 
 # CARD
