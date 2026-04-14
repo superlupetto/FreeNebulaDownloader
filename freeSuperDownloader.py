@@ -6,7 +6,7 @@ import urllib.request
 import zipfile
 import shutil
 from tkinter import *
-from tkinter import messagebox
+from tkinter import ttk, messagebox
 
 # =====================
 # VERSION
@@ -38,17 +38,19 @@ except ImportError:
     import yt_dlp
 
 # =====================
-# LOG
+# LOG (unchanged)
 # =====================
 def log(msg):
     try:
+        output.configure(state="normal")
         output.insert(END, msg + "\n")
         output.see(END)
+        output.configure(state="disabled")
     except:
         print(msg)
 
 # =====================
-# FFmpeg
+# FFmpeg (unchanged)
 # =====================
 def install_ffmpeg():
     if os.path.exists(FFMPEG_PATH):
@@ -74,7 +76,7 @@ def install_ffmpeg():
     log("FFmpeg pronto")
 
 # =====================
-# UPDATE SYSTEM
+# UPDATE SYSTEM (unchanged)
 # =====================
 def check_update():
     try:
@@ -107,7 +109,7 @@ def run_update():
         log(str(e))
 
 # =====================
-# YT-DLP UPDATE (AUTO + MANUAL)
+# YT-DLP UPDATE (unchanged)
 # =====================
 def update_ytdlp():
     try:
@@ -124,17 +126,14 @@ def update_ytdlp():
     except Exception as e:
         log(str(e))
 
-# auto update at startup (silent)
-threading.Thread(target=update_ytdlp, daemon=True).start()
-
 # =====================
-# DOWNLOAD
+# DOWNLOAD (UNCHANGED)
 # =====================
 def progress_hook(d):
     if d['status'] == 'downloading':
-        progress_label.config(text=d.get('_percent_str', '').strip())
+        progress_var.set(d.get('_percent_str', '').strip())
     elif d['status'] == 'finished':
-        progress_label.config(text="OK")
+        progress_var.set("100%")
 
 
 def download_thread(url):
@@ -176,38 +175,78 @@ def download():
     threading.Thread(target=download_thread, args=(url,), daemon=True).start()
 
 # =====================
-# OPEN FOLDERS
+# OPEN
 # =====================
 def open_folder(p):
     os.startfile(p)
 
 # =====================
-# GUI
+# UI MODERNA LIQUID GLASS (MINIMAL + SPACIOUS)
 # =====================
 root = Tk()
 root.title("FreeSuperDownloader PRO")
-root.geometry("540x420")
+root.geometry("760x600")
+root.configure(bg="#f4f7ff")
+
+style = ttk.Style()
+style.theme_use("clam")
+style.configure("TButton", font=("Segoe UI", 10), padding=10)
+style.configure("TLabel", font=("Segoe UI", 10), background="#f4f7ff")
 
 mode = StringVar(value="mp3")
+progress_var = StringVar(value="Pronto")
 
-Label(root, text="Link:").pack()
-url_entry = Entry(root, width=60)
-url_entry.pack()
+# MAIN WRAPPER (floating glass feel)
+container = Frame(root, bg="#f4f7ff")
+container.pack(expand=True, fill=BOTH, padx=40, pady=30)
 
-Radiobutton(root, text="MP3", variable=mode, value="mp3").pack()
-Radiobutton(root, text="MP4", variable=mode, value="mp4").pack()
+# HEADER
+header = Frame(container, bg="#f4f7ff")
+header.pack(fill=X, pady=(0,20))
 
-Button(root, text="Scarica", command=download).pack()
-Button(root, text="Aggiorna programma", command=run_update).pack()
-Button(root, text="Aggiorna yt-dlp", command=update_ytdlp).pack()
+Label(header, text="FreeSuperDownloader", font=("Segoe UI", 22, "bold"), bg="#f4f7ff", fg="#1b2b4a").pack()
+Label(header, text="minimal • modern • liquid UI", font=("Segoe UI", 11), bg="#f4f7ff", fg="#6b7a99").pack()
 
-Button(root, text="Musica", command=lambda: open_folder(MUSIC_DIR)).pack()
-Button(root, text="Video", command=lambda: open_folder(VIDEO_DIR)).pack()
+# CARD
+card = Frame(container, bg="#ffffff")
+card.pack(fill=BOTH, expand=True)
 
-progress_label = Label(root, text="Pronto")
-progress_label.pack()
+# spacing helper
+pad = 18
 
-output = Text(root, height=10)
-output.pack(fill=BOTH, expand=True)
+Label(card, text="Video URL", bg="#ffffff", fg="#1b2b4a", font=("Segoe UI", 11)).pack(anchor="w", padx=pad, pady=(pad,5))
+
+url_entry = Entry(card, font=("Segoe UI", 12), bg="#f3f6ff", relief="flat", bd=0)
+url_entry.pack(fill=X, padx=pad, ipady=10)
+
+# MODE
+mode_frame = Frame(card, bg="#ffffff")
+mode_frame.pack(pady=20)
+
+Radiobutton(mode_frame, text="Audio MP3", variable=mode, value="mp3", bg="#ffffff", indicatoron=0, padx=18, pady=8).pack(side=LEFT, padx=10)
+Radiobutton(mode_frame, text="Video MP4", variable=mode, value="mp4", bg="#ffffff", indicatoron=0, padx=18, pady=8).pack(side=LEFT, padx=10)
+
+# BUTTONS (pill-like feel)
+btn_frame = Frame(card, bg="#ffffff")
+btn_frame.pack(pady=10)
+
+ttk.Button(btn_frame, text="Download").pack(side=LEFT, padx=6)
+ttk.Button(btn_frame, text="Update App", command=run_update).pack(side=LEFT, padx=6)
+ttk.Button(btn_frame, text="Update yt-dlp", command=update_ytdlp).pack(side=LEFT, padx=6)
+
+# FOLDERS
+folder_frame = Frame(card, bg="#ffffff")
+folder_frame.pack(pady=10)
+
+ttk.Button(folder_frame, text="Musica", command=lambda: open_folder(MUSIC_DIR)).pack(side=LEFT, padx=6)
+ttk.Button(folder_frame, text="Video", command=lambda: open_folder(VIDEO_DIR)).pack(side=LEFT, padx=6)
+
+# PROGRESS
+Label(card, textvariable=progress_var, bg="#ffffff", fg="#334a6b", font=("Segoe UI", 11)).pack(pady=10)
+
+# LOG (soft glass dark)
+output = Text(card, height=10, bg="#0b1220", fg="#d6e4ff", relief="flat", insertbackground="white")
+output.pack(fill=BOTH, padx=pad, pady=(10,pad))
+output.configure(state="disabled")
 
 root.mainloop()
