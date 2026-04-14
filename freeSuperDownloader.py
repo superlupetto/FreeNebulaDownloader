@@ -204,8 +204,8 @@ container.pack(expand=True, fill=BOTH, padx=40, pady=30)
 header = Frame(container, bg="#f4f7ff")
 header.pack(fill=X, pady=(0,20))
 
-Label(header, text="FreeSuperDownloader", font=("Segoe UI", 22, "bold"), bg="#f4f7ff", fg="#1b2b4a").pack()
-Label(header, text="minimal • modern • liquid UI", font=("Segoe UI", 11), bg="#f4f7ff", fg="#6b7a99").pack()
+Label(header, text="FreeSuperDownloader V2.1", font=("Segoe UI", 22, "bold"), bg="#f4f7ff", fg="#1b2b4a").pack()
+Label(header, text="minimale • moderno • interfaccia utente fluida", font=("Segoe UI", 11), bg="#f4f7ff", fg="#6b7a99").pack()
 
 # CARD
 card = Frame(container, bg="#ffffff")
