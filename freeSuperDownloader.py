@@ -230,7 +230,7 @@ Radiobutton(mode_frame, text="Video MP4", variable=mode, value="mp4", bg="#fffff
 btn_frame = Frame(card, bg="#ffffff")
 btn_frame.pack(pady=10)
 
-ttk.Button(btn_frame, text="Download").pack(side=LEFT, padx=6)
+ttk.Button(btn_frame, text="Download", command=download).pack(side=LEFT, padx=6)
 ttk.Button(btn_frame, text="Update App", command=run_update).pack(side=LEFT, padx=6)
 ttk.Button(btn_frame, text="Update yt-dlp", command=update_ytdlp).pack(side=LEFT, padx=6)
 
