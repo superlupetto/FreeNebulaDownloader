@@ -13,9 +13,8 @@ from tkinter import ttk, messagebox
 # =====================
 VERSION = "2.1"
 BASE_URL = "https://raw.githubusercontent.com/superlupetto/FreeSuperDownloader/main/"
-
 VERSION_URL = BASE_URL + "version.txt"
-UPDATE_URL = BASE_URL + "freeSuperDownloader.py"  # 👈 FIX: niente .pyw
+UPDATE_URL = BASE_URL + "freeSuperDownloader.pyw"
 
 # =====================
 # PATHS
