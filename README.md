@@ -129,5 +129,5 @@ Se vedi errori legati a FFmpeg:
 
 ## Licenza
 
-Non specificata in questo progetto/cartella. Se vuoi, posso aggiungere un file `LICENSE` (MIT/GPL/etc.) senza cambiare il codice.
-
+Licenza free
+ 
