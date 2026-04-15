@@ -103,10 +103,6 @@ Se vedi errori legati a FFmpeg:
 
 ## Troubleshooting
 
-- **“HTTP Error 404: Not Found” durante Update**
-  - Il file remoto non esiste oppure il nome non coincide (maiuscole/minuscole).
-  - Verifica che nel repo remoto il file si chiami `FreeSuperDownloader.pyw`.
-
 - **Download non parte / link non supportato**
   - Non tutti i siti sono supportati da `yt-dlp`.
   - Aggiorna `yt-dlp` col pulsante dedicato.
@@ -125,4 +121,3 @@ Se vedi errori legati a FFmpeg:
 ## Licenza
 
 Licenza free
- 
