@@ -192,6 +192,11 @@ def progress_hook(d):
     elif d['status'] == 'finished':
         progress_var.set("100%")
         progress_bar['value'] = 100
+        try:
+            # UI updates must run on the Tk main thread
+            root.after(0, lambda: (url_entry.delete(0, END) if url_entry else None))
+        except Exception:
+            pass
         toast("Download completato")
 
 
