@@ -11,10 +11,11 @@ from tkinter import ttk, messagebox
 # =====================
 # VERSION
 # =====================
-VERSION = "2.2"
+VERSION = "2.1"
 BASE_URL = "https://raw.githubusercontent.com/superlupetto/FreeSuperDownloader/main/"
+
 VERSION_URL = BASE_URL + "version.txt"
-UPDATE_URL = BASE_URL + "freeSuperDownloader.py"
+UPDATE_URL = BASE_URL + "freeSuperDownloader.py"  # 👈 FIX: niente .pyw
 
 # =====================
 # PATHS
@@ -52,32 +53,49 @@ def log(msg):
 # =====================
 # FFmpeg
 # =====================
+def check_ffmpeg():
+    return (
+        os.path.exists(os.path.join(FFMPEG_DIR, "bin", "ffmpeg.exe")) and
+        os.path.exists(os.path.join(FFMPEG_DIR, "bin", "ffprobe.exe"))
+    )
+
+
 def install_ffmpeg():
-    if os.path.exists(FFMPEG_PATH):
+    if check_ffmpeg():
         return
 
-    log("Installazione FFmpeg...")
+    log("Installazione FFmpeg (auto repair mode)...")
     url = "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-gpl.zip"
     zip_path = os.path.join(BASE_DIR, "ffmpeg.zip")
 
-    urllib.request.urlretrieve(url, zip_path)
+    try:
+        urllib.request.urlretrieve(url, zip_path)
 
-    with zipfile.ZipFile(zip_path, 'r') as z:
-        z.extractall(BASE_DIR)
+        with zipfile.ZipFile(zip_path, 'r') as z:
+            z.extractall(BASE_DIR)
 
-    for f in os.listdir(BASE_DIR):
-        if "ffmpeg" in f.lower():
-            src = os.path.join(BASE_DIR, f)
-            if os.path.isdir(src):
-                shutil.move(src, FFMPEG_DIR)
-                break
+        # move correct folder
+        for f in os.listdir(BASE_DIR):
+            if "ffmpeg" in f.lower():
+                src = os.path.join(BASE_DIR, f)
+                if os.path.isdir(src):
+                    # ensure clean install
+                    if os.path.exists(FFMPEG_DIR):
+                        shutil.rmtree(FFMPEG_DIR, ignore_errors=True)
+                    shutil.move(src, FFMPEG_DIR)
+                    break
 
-    os.remove(zip_path)
-    log("FFmpeg pronto")
+        os.remove(zip_path)
 
-# =====================
-# UPDATE SYSTEM
-# =====================
+        if check_ffmpeg():
+            log("FFmpeg OK (auto-repair completato)")
+        else:
+            log("FFmpeg installato ma ffprobe mancante")
+
+    except Exception as e:
+        log(str(e))
+
+
 def check_update():
     try:
         remote = urllib.request.urlopen(VERSION_URL, timeout=5).read().decode().strip()
@@ -176,12 +194,24 @@ def download_thread(url):
         }
 
         if mode.get() == 'mp3':
-            opts['format'] = 'bestaudio/best'
-            opts['postprocessors'] = [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': '192'
-            }]
+            # MP3 TURBO STABLE MODE (no ffprobe dependency issues)
+            opts.update({
+                'format': 'bestaudio/best',
+                'ffmpeg_location': os.path.join(FFMPEG_DIR, "bin"),
+                'outtmpl': os.path.join(MUSIC_DIR, '%(title)s.%(ext)s'),
+                'noplaylist': True,
+                'quiet': True,
+                'no_warnings': True,
+                'keepvideo': False,
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3',
+                    'preferredquality': '192'
+                }],
+                # extra safety flags
+                'prefer_ffmpeg': True,
+                'postprocessor_args': ['-vn']
+            })
         else:
             q = quality.get() if 'quality' in globals() else 'best'
 
@@ -204,24 +234,77 @@ def download_thread(url):
         log(str(e))
 
 
+# =====================
+# DOWNLOAD QUEUE SYSTEM (PRO)
+# =====================
+
+download_queue = []
+queue_running = False
+
+
+def process_queue():
+    global queue_running
+    queue_running = True
+
+    while download_queue:
+        url = download_queue.pop(0)
+        try:
+            log(f"In coda: {url}")
+            install_ffmpeg()
+
+            opts = {
+                'outtmpl': os.path.join(MUSIC_DIR if mode.get() == 'mp3' else VIDEO_DIR, '%(title)s.%(ext)s'),
+                'noplaylist': True,
+                'progress_hooks': [progress_hook],
+                'ffmpeg_location': os.path.join(FFMPEG_DIR, "bin"),
+                'quiet': True,
+                'no_warnings': True,
+            }
+
+            if mode.get() == 'mp3':
+                opts.update({
+                    'format': 'bestaudio/best',
+                    'postprocessors': [{
+                        'key': 'FFmpegExtractAudio',
+                        'preferredcodec': 'mp3',
+                        'preferredquality': '192'
+                    }]
+                })
+            else:
+                q = quality.get() if 'quality' in globals() else 'best'
+                if q == 'best':
+                    fmt = 'bv*+ba/b'
+                else:
+                    fmt = f"bestvideo[height<={q}]+bestaudio/best"
+
+                opts['format'] = fmt
+                opts['merge_output_format'] = 'mp4'
+                opts['postprocessor_args'] = ['-movflags', '+faststart']
+
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                ydl.download([url])
+
+            log("Download completato")
+
+        except Exception as e:
+            log(str(e))
+
+    queue_running = False
+    toast("Coda completata")
+
+
 def download():
     url = url_entry.get().strip()
     if not url:
         messagebox.showerror("Errore", "Inserisci link")
         return
 
-    toast("Download avviato")
-    progress_bar['value'] = 0
-    threading.Thread(target=download_thread, args=(url,), daemon=True).start()
+    download_queue.append(url)
+    toast("Aggiunto in coda")
 
-    url = url_entry.get().strip()
-    if not url:
-        messagebox.showerror("Errore", "Inserisci link")
-        return
-
-    toast("Download avviato")
-    progress_bar['value'] = 0
-    threading.Thread(target=download_thread, args=(url,), daemon=True).start()
+    global queue_running
+    if not queue_running:
+        threading.Thread(target=process_queue, daemon=True).start()
 
 
 # =====================
@@ -266,16 +349,9 @@ container.pack(expand=True, fill=BOTH, padx=40, pady=30)
 header = Frame(container, bg="#0b1220")
 header.pack(fill=X)
 
-# mac controls
-c = Canvas(header, width=80, height=20, bg="#0b1220", highlightthickness=0)
-c.pack(side=LEFT)
-c.create_oval(5,5,15,15,fill="#ff5f57",outline="")
-c.create_oval(25,5,35,15,fill="#ffbd2e",outline="")
-c.create_oval(45,5,55,15,fill="#28c840",outline="")
-
 Label(header, text="FreeSuperDownloader", font=("Segoe UI", 22, "bold"), bg="#0b1220", fg="white").pack()
 
-version = Label(header, text="v2.2", bg="#0b1220", fg="#94a3b8", font=("Segoe UI", 9))
+version = Label(header, text="v2.1", bg="#0b1220", fg="#94a3b8", font=("Segoe UI", 9))
 version.place(relx=1.0, x=-10, y=5, anchor="ne")
 
 # CARD
@@ -303,6 +379,18 @@ Label(card, text="URL", bg="#111827", fg="white").pack(anchor="w", padx=20, pady
 
 url_entry = Entry(card, bg="#1f2937", fg="white", insertbackground="white", relief="flat")
 url_entry.pack(fill=X, padx=20, ipady=8)
+
+# RIGHT CLICK PASTE MENU (modern UX)
+context_menu = Menu(root, tearoff=0)
+context_menu.add_command(label="Incolla", command=lambda: url_entry.event_generate("<<Paste>>"))
+context_menu.add_command(label="Incolla e avvia", command=lambda: (url_entry.event_generate("<<Paste>>"), download()))
+
+
+def show_menu(event):
+    context_menu.tk_popup(event.x_root, event.y_root)
+
+url_entry.bind("<Button-3>", show_menu)
+url_entry.bind("<Control-v>", lambda e: None)
 url_entry.bind("<Double-Button-1>", paste_url)
 
 btns = Frame(card, bg="#111827")
