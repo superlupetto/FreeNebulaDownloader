@@ -1,60 +1,133 @@
-# 🎬 Super Downloader Pro v2.9
+# FreeSuperDownloader PRO
 
-Un potente downloader da terminale in Python per scaricare audio e video da internet (YouTube e altri siti supportati da yt-dlp).
+Downloader e convertitore **MP3 / MP4** con interfaccia grafica (Tkinter) basato su **yt-dlp** e **FFmpeg**.
 
----
+## Cosa fa
 
-## 🚀 Funzionalità
+- **Scarica audio (MP3)** o **video (MP4)** da un URL supportato da `yt-dlp`.
+- **Coda download**: puoi aggiungere più link e verranno processati in sequenza.
+- **Progress** live con percentuale e barra.
+- **Auto-install/repair FFmpeg** (Windows): se non presente, lo scarica e lo configura automaticamente.
+- **Aggiornamento app** (pulsante Update): sostituisce il file `.pyw` con la versione remota.
+- **Aggiornamento yt-dlp** (pulsante yt-dlp): aggiorna il pacchetto via `pip`.
 
-- 🎵 Download MP3 (alta qualità 192 kbps)
-- 🎬 Download MP4 (video + audio)
-- 🔄 Conversione automatica MKV → MP4
-- 🎧 Estrazione MP3 da video locali
-- 🌍 Supporto multilingua
-- ⚡ Download continuo (loop senza riavviare)
-- 🔧 Installazione automatica di FFmpeg
-- 🔄 Aggiornamento automatico script
-- ⬆️ Aggiornamento integrato di yt-dlp
-- 📝 Sistema di logging errori
+> Nota: questa cartella contiene `FreeSuperDownloader.pyw` (l’app). La logica di download/conversione è tutta lì.
 
----
+## Requisiti
 
-## 📁 Struttura cartelle
+- **Windows 10/11**
+- **Python 3.10+** consigliato (funziona anche con versioni 3.x recenti)
+- Connessione internet (per download, FFmpeg e update)
 
-Il programma crea automaticamente:
-C:\FreeSuperDownloader
-│
-├── Musica\ # File MP3
-├── Video\ # File video
-├── log.txt # Log errori
-└── config.txt # Lingua selezionata
+Dipendenze Python:
 
----
+- `yt-dlp` (viene installato automaticamente al primo avvio se mancante)
 
-## 🧰 Requisiti
+## Avvio
 
-- Python 3.x
-- Connessione Internet
-- Windows (ottimizzato per)
-
-Le dipendenze vengono installate automaticamente:
-- `yt-dlp`
-- `FFmpeg` (download automatico)
-
----
-
-## ▶️ Utilizzo
-
-Avvia lo script:
+Doppio click su `FreeSuperDownloader.pyw` oppure da terminale:
 
 ```bash
-python FreeSuperDownloader.py
+python FreeSuperDownloader.pyw
+```
 
-Download MP3 / MP4
-Seleziona opzione 1 o 2
-Incolla il link
-Premi INVIO
-Il download parte automaticamente
+## Uso rapido
 
-👉 Modalità continua: inserisci più link senza riavviare
-👉 Premi X per tornare al menu
+1. Scegli il formato con il **toggle animato**:
+   - **MP3** (audio)
+   - **MP4** (video)
+2. Incolla l’URL nel campo.
+3. Premi **Download**.
+
+### UX extra
+
+- **Click destro** sul campo URL → menu:
+  - **Incolla**
+  - **Incolla e avvia**
+- **Doppio click** sul campo URL → incolla dagli appunti.
+- A fine download: il campo URL viene **svuotato automaticamente**.
+
+## Dove salva i file
+
+L’app crea una cartella in:
+
+- `Documenti\FreeSuperDownloader\`
+
+Sottocartelle:
+
+- `Musica\` → output **MP3**
+- `Video\` → output **MP4**
+- `ffmpeg\` → installazione locale di FFmpeg (se auto-installata)
+
+Pulsanti rapidi:
+
+- **Apri Musica**
+- **Apri Video**
+
+## Come funziona la conversione
+
+- Modalità **MP3**: scarica l’audio migliore e lo converte in MP3 tramite FFmpeg (postprocessor `FFmpegExtractAudio`).
+- Modalità **MP4**: scarica best video + audio e merge in MP4 (`merge_output_format = "mp4"`), con flag `+faststart`.
+
+## Update dell’app
+
+Premendo **Update**:
+
+- l’app scarica la versione remota e la salva temporaneamente come `update.py`
+- crea `update.bat` che sostituisce il file in esecuzione e riavvia l’app
+
+### Nota importante (404 Not Found)
+
+Gli URL “raw” di GitHub sono **case-sensitive**: il file remoto deve chiamarsi **esattamente**:
+
+- `FreeSuperDownloader.pyw`
+
+Se `version.txt` non esiste nel repo remoto, l’app ricava la versione leggendo `VERSION = "..."` direttamente dal file remoto.
+
+## Update di yt-dlp
+
+Premendo **yt-dlp** l’app esegue:
+
+```bash
+python -m pip install -U yt-dlp
+```
+
+Se hai problemi di permessi, prova ad avviare Python con i permessi adeguati oppure installa `yt-dlp` nel tuo ambiente Python.
+
+## FFmpeg (auto repair)
+
+Se FFmpeg non è presente, l’app scarica una build Windows (GPL) e la estrae in:
+
+- `Documenti\FreeSuperDownloader\ffmpeg\bin\ffmpeg.exe`
+- `Documenti\FreeSuperDownloader\ffmpeg\bin\ffprobe.exe`
+
+Se vedi errori legati a FFmpeg:
+
+- controlla che la cartella `ffmpeg\bin\` contenga **ffmpeg.exe** e **ffprobe.exe**
+- in caso di installazione corrotta, cancella la cartella `ffmpeg\` e riavvia l’app (verrà reinstallato)
+
+## Troubleshooting
+
+- **“HTTP Error 404: Not Found” durante Update**
+  - Il file remoto non esiste oppure il nome non coincide (maiuscole/minuscole).
+  - Verifica che nel repo remoto il file si chiami `FreeSuperDownloader.pyw`.
+
+- **Download non parte / link non supportato**
+  - Non tutti i siti sono supportati da `yt-dlp`.
+  - Aggiorna `yt-dlp` col pulsante dedicato.
+
+- **Conversione MP3 fallisce**
+  - Verifica che FFmpeg sia installato (l’app prova a ripararlo automaticamente).
+
+- **Percorsi / permessi**
+  - L’app scrive in `Documenti\FreeSuperDownloader`. Assicurati di avere permessi di scrittura.
+
+## Sicurezza e note
+
+- L’app scarica contenuti da internet: usa solo link fidati.
+- Il pulsante **Update** sostituisce il file in esecuzione: usalo solo se ti fidi della sorgente (repo GitHub indicato nel codice).
+
+## Licenza
+
+Non specificata in questo progetto/cartella. Se vuoi, posso aggiungere un file `LICENSE` (MIT/GPL/etc.) senza cambiare il codice.
+
