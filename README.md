@@ -88,11 +88,6 @@ Se `version.txt` non esiste nel repo remoto, l’app ricava la versione leggendo
 
 Premendo **yt-dlp** l’app esegue:
 
-```bash
-python -m pip install -U yt-dlp
-```
-
-Se hai problemi di permessi, prova ad avviare Python con i permessi adeguati oppure installa `yt-dlp` nel tuo ambiente Python.
 
 ## FFmpeg (auto repair)
 
