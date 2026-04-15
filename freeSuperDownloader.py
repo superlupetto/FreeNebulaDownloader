@@ -15,7 +15,7 @@ VERSION = "2.1"
 BASE_URL = "https://raw.githubusercontent.com/superlupetto/FreeSuperDownloader/main/"
 VERSION_URL = BASE_URL + "version.txt"
 # GitHub raw URLs are case-sensitive: keep filename exact
-UPDATE_URL = BASE_URL + "FreeSuperDownloader.pyw"
+UPDATE_URL = BASE_URL + "FreeSuperDownloader.exe"
 
 # =====================
 # PATHS
@@ -236,14 +236,16 @@ def download_thread(url):
             q = quality.get() if 'quality' in globals() else 'best'
 
             if q == 'best':
-                fmt = 'bv*+ba/b'
+                # Prefer MP4 container + H.264 (avc1) + AAC (m4a) to avoid Opus incompatibility
+                fmt = 'bestvideo[vcodec^=avc1][ext=mp4]+bestaudio[ext=m4a]/bestvideo[vcodec^=avc1]+bestaudio[ext=m4a]/best[ext=mp4]/best'
             else:
-                fmt = f"bestvideo[height<={q}]+bestaudio/best"
+                fmt = f"bestvideo[height<={q}][vcodec^=avc1][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<={q}][vcodec^=avc1]+bestaudio[ext=m4a]/best[ext=mp4]/best"
 
             opts['format'] = fmt
             opts['merge_output_format'] = 'mp4'
-            opts['format_sort'] = ['res', 'fps', 'codec:h264', 'ext:mp4:m4a']
-            opts['postprocessor_args'] = ['-movflags', '+faststart']
+            opts['format_sort'] = ['res', 'fps', 'codec:h264', 'acodec:aac', 'ext:mp4:m4a']
+            # Force AAC audio if Opus is selected by fallback; keep video stream when possible.
+            opts['postprocessor_args'] = ['-movflags', '+faststart', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k']
 
         with yt_dlp.YoutubeDL(opts) as ydl:
             ydl.download([url])
@@ -293,13 +295,14 @@ def process_queue():
             else:
                 q = quality.get() if 'quality' in globals() else 'best'
                 if q == 'best':
-                    fmt = 'bv*+ba/b'
+                    fmt = 'bestvideo[vcodec^=avc1][ext=mp4]+bestaudio[ext=m4a]/bestvideo[vcodec^=avc1]+bestaudio[ext=m4a]/best[ext=mp4]/best'
                 else:
-                    fmt = f"bestvideo[height<={q}]+bestaudio/best"
+                    fmt = f"bestvideo[height<={q}][vcodec^=avc1][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<={q}][vcodec^=avc1]+bestaudio[ext=m4a]/best[ext=mp4]/best"
 
                 opts['format'] = fmt
                 opts['merge_output_format'] = 'mp4'
-                opts['postprocessor_args'] = ['-movflags', '+faststart']
+                opts['format_sort'] = ['res', 'fps', 'codec:h264', 'acodec:aac', 'ext:mp4:m4a']
+                opts['postprocessor_args'] = ['-movflags', '+faststart', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k']
 
             with yt_dlp.YoutubeDL(opts) as ydl:
                 ydl.download([url])
@@ -556,7 +559,7 @@ Label(header, text="FreeSuperDownloader", font=("Segoe UI", 24, "bold"), bg="#f6
 Label(header, text="Downloader & Convert • minimal future UI",
       font=("Segoe UI", 10), bg="#f6f7fb", fg="#64748b").pack(anchor="w", pady=(6, 0))
 
-version = Label(header, text="v2.1", bg="#f6f7fb", fg="#64748b", font=("Segoe UI", 9))
+version = Label(header, text="v3.1", bg="#f6f7fb", fg="#64748b", font=("Segoe UI", 9))
 version.place(relx=1.0, x=-10, y=5, anchor="ne")
 
 # CARD
