@@ -6,7 +6,7 @@ import urllib.request
 import zipfile
 import shutil
 from tkinter import *
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 
 # =====================
 # VERSION
@@ -329,6 +329,140 @@ def download():
     if not queue_running:
         threading.Thread(target=process_queue, daemon=True).start()
 
+#
+# =====================
+# LOCAL FILE TOOLS (MKV->MP4 / Extract MP3)
+# =====================
+local_files = []
+local_files_list = None
+
+
+def _safe_filename(s: str) -> str:
+    bad = '<>:"/\\|?*'
+    for ch in bad:
+        s = s.replace(ch, "_")
+    return s.strip().strip(".")
+
+
+def choose_local_files():
+    global local_files
+    paths = filedialog.askopenfilenames(
+        title="Seleziona file multimediali",
+        filetypes=[
+            ("Media", "*.mkv *.mp4 *.webm *.mov *.avi *.m4v *.flv *.mp3 *.m4a *.aac *.wav *.ogg *.opus"),
+            ("Tutti i file", "*.*"),
+        ],
+    )
+    if not paths:
+        return
+    local_files = list(paths)
+    if local_files_list is not None:
+        local_files_list.delete(0, END)
+        for p in local_files:
+            local_files_list.insert(END, p)
+    toast(f"Selezionati {len(local_files)} file")
+
+
+def clear_local_files():
+    global local_files
+    local_files = []
+    if local_files_list is not None:
+        local_files_list.delete(0, END)
+
+
+def _ffmpeg_run(args):
+    install_ffmpeg()
+    exe = os.path.join(FFMPEG_DIR, "bin", "ffmpeg.exe")
+    cmd = [exe, "-y", "-hide_banner", "-loglevel", "error"] + args
+    return subprocess.run(cmd, capture_output=True, text=True)
+
+
+def _convert_one_mkv_to_mp4(src_path: str):
+    base = os.path.splitext(os.path.basename(src_path))[0]
+    base = _safe_filename(base) or "video"
+    dst_path = os.path.join(VIDEO_DIR, base + ".mp4")
+
+    # Fast path: stream copy to MP4 (works when codecs are MP4-compatible).
+    r = _ffmpeg_run(["-i", src_path, "-map", "0", "-c", "copy", "-movflags", "+faststart", dst_path])
+    if r.returncode == 0:
+        return dst_path, None
+
+    # Fallback: re-encode to H.264 + AAC for maximum compatibility.
+    r2 = _ffmpeg_run([
+        "-i", src_path,
+        "-map", "0:v:0?", "-map", "0:a:0?", "-map", "0:s:0?",
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", "20",
+        "-c:a", "aac", "-b:a", "192k",
+        "-c:s", "mov_text",
+        "-movflags", "+faststart",
+        dst_path
+    ])
+    if r2.returncode == 0:
+        return dst_path, None
+    return None, (r2.stderr or r.stderr or "Errore FFmpeg")
+
+
+def _extract_mp3_from_video(src_path: str):
+    base = os.path.splitext(os.path.basename(src_path))[0]
+    base = _safe_filename(base) or "audio"
+    dst_path = os.path.join(MUSIC_DIR, base + ".mp3")
+
+    r = _ffmpeg_run([
+        "-i", src_path,
+        "-vn",
+        "-c:a", "libmp3lame",
+        "-b:a", "192k",
+        dst_path
+    ])
+    if r.returncode == 0:
+        return dst_path, None
+    return None, (r.stderr or "Errore FFmpeg")
+
+
+def _run_local_batch(kind: str):
+    if not local_files:
+        messagebox.showerror("Errore", "Seleziona almeno un file")
+        return
+
+    def worker():
+        try:
+            total = len(local_files)
+            for i, p in enumerate(list(local_files), start=1):
+                try:
+                    progress_bar['value'] = 0
+                except Exception:
+                    pass
+                progress_var.set(f"{i}/{total}")
+                log(f"{'Converti' if kind=='mkv2mp4' else 'Estrai MP3'}: {p}")
+
+                if kind == "mkv2mp4":
+                    out, err = _convert_one_mkv_to_mp4(p)
+                else:
+                    out, err = _extract_mp3_from_video(p)
+
+                if out:
+                    log(f"OK -> {out}")
+                    try:
+                        progress_bar['value'] = 100
+                    except Exception:
+                        pass
+                else:
+                    log(f"ERRORE -> {err}")
+
+            toast("Operazione completata")
+        except Exception as e:
+            log(str(e))
+
+    threading.Thread(target=worker, daemon=True).start()
+
+
+def convert_mkv_to_mp4():
+    _run_local_batch("mkv2mp4")
+
+
+def extract_mp3_local():
+    _run_local_batch("extractmp3")
+
 
 # =====================
 # OPEN
@@ -354,8 +488,9 @@ def paste_url(event):
 
 root = Tk()
 root.title("FreeSuperDownloader PRO")
-root.geometry("820x650")
-root.configure(bg="#f6f7fb")
+root.geometry("820x920")
+root.configure(bg="#f2f4ff")
+root.minsize(780, 860)
 root.attributes('-alpha', 0.0)
 
 # fade in
@@ -376,6 +511,81 @@ def _rounded_rect(canvas, x1, y1, x2, y2, r=16, **kwargs):
     items.append(canvas.create_oval(x1, y2 - 2 * r, x1 + 2 * r, y2, **kwargs))
     items.append(canvas.create_oval(x2 - 2 * r, y2 - 2 * r, x2, y2, **kwargs))
     return items
+
+def _hex_to_rgb(h):
+    h = h.lstrip("#")
+    return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
+
+
+def _rgb_to_hex(rgb):
+    return "#{:02x}{:02x}{:02x}".format(*rgb)
+
+
+def _lerp(a, b, t):
+    return int(a + (b - a) * t)
+
+
+def _blend(c1, c2, t):
+    r1, g1, b1 = _hex_to_rgb(c1)
+    r2, g2, b2 = _hex_to_rgb(c2)
+    return _rgb_to_hex((_lerp(r1, r2, t), _lerp(g1, g2, t), _lerp(b1, b2, t)))
+
+
+def _draw_glow_blob(canvas, cx, cy, r, color, steps=18):
+    # Simulate a soft glow by drawing multiple transparent-ish rings (Tk has no alpha).
+    # We approximate by blending towards background.
+    bg = "#f2f4ff"
+    for i in range(steps):
+        t = i / max(1, steps - 1)
+        # Softer / more subtle (closer to background)
+        col = _blend(color, bg, 0.70 + t * 0.25)
+        rr = int(r * (1 - t * 0.85))
+        canvas.create_oval(cx - rr, cy - rr, cx + rr, cy + rr, fill=col, outline="")
+
+
+class GlassCard(Frame):
+    def __init__(self, master, radius=22, **kwargs):
+        super().__init__(master, bg=kwargs.pop("bg", "#000000"))
+        self.radius = radius
+
+        self.canvas = Canvas(self, bg=self["bg"], highlightthickness=0)
+        self.canvas.pack(fill=BOTH, expand=True)
+
+        self.content = Frame(self.canvas, bg="#ffffff")
+        self._win = self.canvas.create_window(0, 0, window=self.content, anchor="nw")
+
+        self.bind("<Configure>", self._on_resize)
+
+    def _on_resize(self, _e=None):
+        w = self.winfo_width()
+        h = self.winfo_height()
+        if w <= 2 or h <= 2:
+            return
+        self.canvas.delete("glass")
+
+        # Frosted base
+        base = "#ffffff"
+        edge = "#dbe2ff"
+        _rounded_rect(self.canvas, 1, 1, w - 1, h - 1, r=self.radius, fill=base, outline=edge, width=1, tags="glass")
+
+        # Top highlight band (liquid/glass feel) – avoid arc artifacts
+        highlight_h = int(h * 0.28)
+        _rounded_rect(
+            self.canvas,
+            6, 6, w - 6, max(20, highlight_h),
+            r=max(10, self.radius - 6),
+            fill="#f7f8ff",
+            outline="",
+            tags="glass"
+        )
+        # Subtle inner border
+        _rounded_rect(self.canvas, 4, 4, w - 4, h - 4, r=self.radius - 3, fill="", outline="#f8fafc", width=1, tags="glass")
+
+        # place inner content with padding
+        pad = 18
+        self.canvas.coords(self._win, pad, pad)
+        self.canvas.itemconfigure(self._win, width=w - pad * 2, height=h - pad * 2)
+
 
 class AnimatedModeToggle(Frame):
     def __init__(self, master, variable, on_value="mp3", off_value="mp4", width=180, height=38, **kwargs):
@@ -414,43 +624,58 @@ class AnimatedModeToggle(Frame):
 
     def _colors(self):
         if self._is_on():
-            return ("#22c55e", "#0f172a")  # track, inner-dot
-        return ("#6366f1", "#0f172a")
+            return ("#e8fff1", "#16a34a")  # track, accent
+        return ("#eef2ff", "#4f46e5")
 
     def _render(self):
         self.canvas.delete("all")
-        track_color, text_bg = self._colors()
+        track_color, accent = self._colors()
 
         self._bg_items = _rounded_rect(
             self.canvas,
             0 + 1, 0 + 1, self.w - 1, self.h - 1,
             r=int(self.h / 2),
             fill=track_color,
-            outline="#e2e8f0",
+            outline="#dbe2ff",
             width=1
+        )
+
+        # inner highlight
+        _rounded_rect(
+            self.canvas,
+            2, 2, self.w - 2, int(self.h / 2),
+            r=int(self.h / 2),
+            fill="#ffffff",
+            outline="",
         )
 
         # Labels (inside track)
         self._txt_left = self.canvas.create_text(
             self.w * 0.30, self.h / 2,
-            text="🎵 MP3",
-            fill="white",
+            text="MP3",
+            fill="#0f172a",
             font=("Segoe UI", 10, "bold")
         )
         self._txt_right = self.canvas.create_text(
             self.w * 0.70, self.h / 2,
-            text="🎬 MP4",
-            fill="white",
+            text="MP4",
+            fill="#0f172a",
             font=("Segoe UI", 10, "bold")
         )
 
         # Knob
         x = self._knob_x
         y = self.pad
+        # soft shadow
+        self.canvas.create_oval(
+            x + 2, y + 3, x + self.knob_size + 2, y + self.knob_size + 3,
+            fill="#e9edff",
+            outline="",
+        )
         self._knob_item = self.canvas.create_oval(
             x, y, x + self.knob_size, y + self.knob_size,
             fill="#ffffff",
-            outline="#e2e8f0",
+            outline="#dbe2ff",
             width=1
         )
         # subtle inner dot
@@ -458,7 +683,7 @@ class AnimatedModeToggle(Frame):
         self.canvas.create_oval(
             x + dot_pad, y + dot_pad,
             x + self.knob_size - dot_pad, y + self.knob_size - dot_pad,
-            fill=text_bg,
+            fill=accent,
             outline=""
         )
 
@@ -510,7 +735,7 @@ class AnimatedModeToggle(Frame):
         self._anim_id = self.after(15, lambda: self._animate_to(target_x))
 
 # =====================
-# LIGHT FUTURE THEME (UI/UX ONLY)
+# LIQUID GLASS THEME (UI/UX ONLY)
 # =====================
 style = ttk.Style()
 try:
@@ -518,69 +743,94 @@ try:
 except Exception:
     pass
 
-style.configure("TProgressbar", thickness=10, troughcolor="#e2e8f0", background="#6366f1")
+style.configure("TProgressbar", thickness=10, troughcolor="#e7eaff", background="#4f46e5")
 
 style.configure("Primary.TButton",
                 font=("Segoe UI", 10, "bold"),
-                padding=(18, 10),
-                background="#111827",
+                padding=(18, 11),
+                background="#0f172a",
                 foreground="#ffffff",
-                borderwidth=0)
+                borderwidth=0,
+                relief="flat")
 style.map("Primary.TButton",
-          background=[("active", "#0b1220"), ("pressed", "#0b1220")])
+          background=[("active", "#111b3d"), ("pressed", "#111b3d")])
 
 style.configure("Secondary.TButton",
                 font=("Segoe UI", 10),
-                padding=(16, 10),
+                padding=(16, 11),
                 background="#ffffff",
                 foreground="#0f172a",
                 borderwidth=1,
                 relief="flat")
 style.map("Secondary.TButton",
-          background=[("active", "#f1f5f9"), ("pressed", "#f1f5f9")])
+          background=[("active", "#f7f8ff"), ("pressed", "#f7f8ff")])
 
 style.configure("Chip.TButton",
                 font=("Segoe UI", 9),
-                padding=(12, 8),
-                background="#f1f5f9",
+                padding=(12, 9),
+                background="#f1f3ff",
                 foreground="#0f172a",
                 borderwidth=0)
 style.map("Chip.TButton",
-          background=[("active", "#e2e8f0"), ("pressed", "#e2e8f0")])
+          background=[("active", "#e7eaff"), ("pressed", "#e7eaff")])
 
-container = Frame(root, bg="#f6f7fb")
-container.pack(expand=True, fill=BOTH, padx=52, pady=40)
+# Background canvas (liquid blobs)
+bg = Canvas(root, bg="#f2f4ff", highlightthickness=0)
+bg.pack(fill=BOTH, expand=True)
+
+container = Frame(bg, bg="#f2f4ff")
+container.place(relx=0.5, rely=0.5, anchor="center")
+container.pack_propagate(False)
+
+def _layout_bg(_e=None):
+    w = root.winfo_width()
+    h = root.winfo_height()
+    bg.delete("blob")
+    # soft blobs
+    scale = min(w, h)
+    _draw_glow_blob(bg, int(w * 0.14), int(h * 0.22), int(scale * 0.20), "#a5b4fc", steps=14)
+    _draw_glow_blob(bg, int(w * 0.92), int(h * 0.18), int(scale * 0.16), "#c4b5fd", steps=14)
+    _draw_glow_blob(bg, int(w * 0.76), int(h * 0.74), int(scale * 0.22), "#93c5fd", steps=14)
+    _draw_glow_blob(bg, int(w * 0.18), int(h * 0.82), int(scale * 0.14), "#a7f3d0", steps=14)
+    # keep container centered and sized
+    max_w = min(980, w - 56)
+    max_h = min(980, h - 46)
+    container.configure(width=max_w, height=max_h)
+    container.place_configure(relx=0.5, rely=0.5, anchor="center", width=max_w, height=max_h)
+
+root.bind("<Configure>", _layout_bg)
 
 # HEADER
-header = Frame(container, bg="#f6f7fb")
-header.pack(fill=X)
+header = Frame(container, bg="#f2f4ff")
+header.pack(fill=X, padx=12, pady=(8, 10))
 
-Label(header, text="FreeSuperDownloader", font=("Segoe UI", 24, "bold"), bg="#f6f7fb", fg="#0f172a").pack(anchor="w")
+Label(header, text="FreeSuperDownloader", font=("Segoe UI", 24, "bold"), bg="#f2f4ff", fg="#0f172a").pack(anchor="w")
 Label(header, text="Downloader & Convert • minimal future UI",
-      font=("Segoe UI", 10), bg="#f6f7fb", fg="#64748b").pack(anchor="w", pady=(6, 0))
+      font=("Segoe UI", 10), bg="#f2f4ff", fg="#64748b").pack(anchor="w", pady=(6, 0))
 
-version = Label(header, text="v3.1", bg="#f6f7fb", fg="#64748b", font=("Segoe UI", 9))
+version = Label(header, text="v3.1", bg="#f2f4ff", fg="#64748b", font=("Segoe UI", 9))
 version.place(relx=1.0, x=-10, y=5, anchor="ne")
 
 # CARD
-card = Frame(container, bg="#ffffff", highlightbackground="#e2e8f0", highlightthickness=1)
-card.pack(fill=BOTH, expand=True, pady=22)
+card = GlassCard(container, radius=26, bg="#f2f4ff")
+card.pack(fill=BOTH, expand=True, padx=12, pady=(0, 14))
+card_body = card.content
 
 mode = StringVar(value="mp3")
 
 # animated toggle (MP3 / MP4)
-mode_frame = Frame(card, bg="#ffffff")
-mode_frame.pack(pady=(22, 12))
+mode_frame = Frame(card_body, bg="#ffffff")
+mode_frame.pack(pady=(6, 12))
 
-AnimatedModeToggle(mode_frame, variable=mode, width=220, height=42, bg="#ffffff").pack()
+AnimatedModeToggle(mode_frame, variable=mode, width=280, height=44, bg="#ffffff").pack()
 progress_var = StringVar(value="0%")
 
-Label(card, text="Incolla un link", bg="#ffffff", fg="#0f172a",
-      font=("Segoe UI", 11, "bold")).pack(anchor="w", padx=26, pady=(14, 6))
+Label(card_body, text="Incolla un link", bg="#ffffff", fg="#0f172a",
+      font=("Segoe UI", 12, "bold")).pack(anchor="w", pady=(6, 6))
 
-url_entry = Entry(card, bg="#f1f5f9", fg="#0f172a", insertbackground="#0f172a",
-                  relief="flat", highlightthickness=1, highlightbackground="#e2e8f0", highlightcolor="#6366f1")
-url_entry.pack(fill=X, padx=26, ipady=10, pady=(0, 8))
+url_entry = Entry(card_body, bg="#f7f8ff", fg="#0f172a", insertbackground="#0f172a",
+                  relief="flat", highlightthickness=1, highlightbackground="#dbe2ff", highlightcolor="#4f46e5")
+url_entry.pack(fill=X, ipady=12, pady=(0, 10))
 
 # RIGHT CLICK PASTE MENU (modern UX)
 context_menu = Menu(root, tearoff=0)
@@ -595,29 +845,54 @@ url_entry.bind("<Button-3>", show_menu)
 url_entry.bind("<Control-v>", lambda e: None)
 url_entry.bind("<Double-Button-1>", paste_url)
 
-btns = Frame(card, bg="#ffffff")
+btns = Frame(card_body, bg="#ffffff")
 btns.pack(pady=(14, 10))
 
 ttk.Button(btns, text="Download", command=download, style="Primary.TButton").pack(side=LEFT, padx=6)
 ttk.Button(btns, text="Update", command=run_update, style="Secondary.TButton").pack(side=LEFT, padx=6)
 ttk.Button(btns, text="yt-dlp", command=update_ytdlp, style="Secondary.TButton").pack(side=LEFT, padx=6)
 
-folder = Frame(card, bg="#ffffff")
+folder = Frame(card_body, bg="#ffffff")
 folder.pack(pady=(0, 8))
 
 ttk.Button(folder, text="Apri Musica", command=lambda: open_folder(MUSIC_DIR), style="Chip.TButton").pack(side=LEFT, padx=6)
 ttk.Button(folder, text="Apri Video", command=lambda: open_folder(VIDEO_DIR), style="Chip.TButton").pack(side=LEFT, padx=6)
 
 # progress LIVE CARD
-progress_bar = ttk.Progressbar(card, mode='determinate', length=520, style="TProgressbar")
+progress_bar = ttk.Progressbar(card_body, mode='determinate', length=560, style="TProgressbar")
 progress_bar.pack(pady=(16, 8))
 
-Label(card, textvariable=progress_var, bg="#ffffff", fg="#64748b", font=("Segoe UI", 9)).pack()
+Label(card_body, textvariable=progress_var, bg="#ffffff", fg="#64748b", font=("Segoe UI", 9)).pack()
 
-output = Text(card, height=10, bg="#f8fafc", fg="#0f172a",
+output = Text(card_body, height=10, bg="#fbfcff", fg="#0f172a",
               insertbackground="#0f172a", relief="flat",
-              highlightthickness=1, highlightbackground="#e2e8f0", highlightcolor="#6366f1")
-output.pack(fill=BOTH, padx=26, pady=(16, 24))
+              highlightthickness=1, highlightbackground="#dbe2ff", highlightcolor="#4f46e5")
+output.pack(fill=BOTH, pady=(16, 6))
+
+# LOCAL FILES CARD (liquid glass)
+local_card = GlassCard(container, radius=26, bg="#f2f4ff")
+local_card.pack(fill=BOTH, expand=False, padx=12, pady=(0, 10))
+local_body = local_card.content
+
+Label(local_body, text="File locali", bg="#ffffff", fg="#0f172a",
+      font=("Segoe UI", 12, "bold")).pack(anchor="w", pady=(6, 10))
+
+local_actions = Frame(local_body, bg="#ffffff")
+local_actions.pack(fill=X)
+
+ttk.Button(local_actions, text="Seleziona file…", command=choose_local_files, style="Secondary.TButton").pack(side=LEFT, padx=(0, 8))
+ttk.Button(local_actions, text="Pulisci", command=clear_local_files, style="Chip.TButton").pack(side=LEFT)
+
+ttk.Button(local_actions, text="Converti MKV → MP4", command=convert_mkv_to_mp4, style="Primary.TButton").pack(side=RIGHT, padx=(8, 0))
+ttk.Button(local_actions, text="Estrai MP3", command=extract_mp3_local, style="Secondary.TButton").pack(side=RIGHT)
+
+local_list_frame = Frame(local_body, bg="#ffffff")
+local_list_frame.pack(fill=BOTH, pady=(12, 6))
+
+local_files_list = Listbox(local_list_frame, height=4, bg="#fbfcff", fg="#0f172a",
+                           highlightthickness=1, highlightbackground="#dbe2ff", relief="flat",
+                           selectbackground="#dbe2ff", selectforeground="#0f172a")
+local_files_list.pack(fill=BOTH, expand=True)
 
 fade()
 root.mainloop()
