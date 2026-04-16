@@ -16,7 +16,7 @@ Downloader e convertitore **MP3 / MP4** con interfaccia grafica (Tkinter) basato
 ## Requisiti
 
 - **Windows 10/11**
-- **Python 3.10+** consigliato (funziona anche con versioni 3.x recenti)
+- **Python 3.10+** consigliato (funziona anche con versioni 3.x recenti) (link)[https://www.python.org/ftp/python/pymanager/python-manager-26.1.msix]
 - Connessione internet (per download, FFmpeg e update)
 
 Dipendenze Python:
