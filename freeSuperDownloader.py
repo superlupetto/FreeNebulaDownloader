@@ -14,8 +14,11 @@ from tkinter import ttk, messagebox, filedialog
 VERSION = "2.1"
 BASE_URL = "https://raw.githubusercontent.com/superlupetto/FreeSuperDownloader/main/"
 VERSION_URL = BASE_URL + "version.txt"
-# GitHub raw URLs are case-sensitive: keep filename exact
-UPDATE_URL = BASE_URL + "FreeSuperDownloader.exe"
+UPDATE_CANDIDATES = [
+    "FreeSuperDownloader.exe",
+    "FreeSuperDownloader.pyw",
+    "FreeSuperDownloader.py",
+]
 
 # =====================
 # PATHS
@@ -98,18 +101,26 @@ def install_ffmpeg():
 
 def check_update():
     try:
-        # version.txt may be missing; fall back to parsing VERSION from the remote script
-        data = urllib.request.urlopen(UPDATE_URL, timeout=8).read().decode(errors="ignore")
         remote = None
-        for line in data.splitlines():
-            line = line.strip()
-            if line.startswith("VERSION") and "=" in line:
-                # expected: VERSION = "2.1"
-                try:
-                    remote = line.split("=", 1)[1].strip().strip("'\"")
-                except Exception:
-                    remote = None
-                break
+        try:
+            remote = urllib.request.urlopen(VERSION_URL, timeout=8).read().decode(errors="ignore").strip()
+        except Exception:
+            remote = None
+
+        # version.txt may be missing; fall back to parsing VERSION from a remote script.
+        if not remote:
+            script_url = _resolve_update_url(prefer_scripts=True)
+            if script_url:
+                data = urllib.request.urlopen(script_url, timeout=8).read().decode(errors="ignore")
+                for line in data.splitlines():
+                    line = line.strip()
+                    if line.startswith("VERSION") and "=" in line:
+                        # expected: VERSION = "2.1"
+                        try:
+                            remote = line.split("=", 1)[1].strip().strip("'\"")
+                        except Exception:
+                            remote = None
+                        break
         if not remote:
             return False, None
         return remote != VERSION, remote
@@ -117,20 +128,42 @@ def check_update():
         return False, None
 
 
+def _resolve_update_url(prefer_scripts=False):
+    candidates = UPDATE_CANDIDATES[:]
+    if prefer_scripts:
+        candidates = [c for c in candidates if c.endswith((".py", ".pyw"))] + [c for c in candidates if c.endswith(".exe")]
+    for filename in candidates:
+        url = BASE_URL + filename
+        try:
+            with urllib.request.urlopen(url, timeout=8):
+                return url
+        except Exception:
+            continue
+    return None
+
+
 def run_update():
     try:
         log("Aggiornamento in corso...")
-        new_file = os.path.join(BASE_DIR, "update.py")
-        urllib.request.urlretrieve(UPDATE_URL, new_file)
+        update_url = _resolve_update_url()
+        if not update_url:
+            raise Exception("Update non disponibile: file remoto non trovato (404).")
+
+        remote_ext = os.path.splitext(update_url)[1] or ".tmp"
+        new_file = os.path.join(BASE_DIR, f"update{remote_ext}")
+        urllib.request.urlretrieve(update_url, new_file)
 
         bat = os.path.join(BASE_DIR, "update.bat")
-        exe = sys.argv[0]
+        app_path = sys.argv[0]
 
         with open(bat, "w") as f:
             f.write("@echo off\n")
             f.write("timeout /t 2 >nul\n")
-            f.write(f"move /y \"{new_file}\" \"{exe}\"\n")
-            f.write(f"start python \"{exe}\"\n")
+            f.write(f"move /y \"{new_file}\" \"{app_path}\"\n")
+            if app_path.lower().endswith(".exe"):
+                f.write(f"start \"\" \"{app_path}\"\n")
+            else:
+                f.write(f"start \"\" python \"{app_path}\"\n")
             f.write("del %0\n")
 
         subprocess.Popen(bat, shell=True)
@@ -200,6 +233,117 @@ def progress_hook(d):
         toast("Download completato")
 
 
+def _is_unavailable_format_error(err):
+    msg = str(err).lower()
+    return "requested format is not available" in msg
+
+
+def _is_auth_required_error(err):
+    msg = str(err).lower()
+    return (
+        "requiring login" in msg
+        or "authentication" in msg
+        or "--cookies-from-browser" in msg
+        or "--cookies" in msg
+        or "sign in" in msg
+    )
+
+
+def _try_with_browser_cookies(url, opts):
+    # Try common browsers on Windows. This helps with TikTok and other gated content.
+    browsers = ("chrome", "edge", "firefox")
+    last_err = None
+    for browser in browsers:
+        retry_opts = dict(opts)
+        retry_opts["cookiesfrombrowser"] = (browser,)
+        try:
+            log(f"Contenuto protetto: provo cookie browser ({browser})...")
+            with yt_dlp.YoutubeDL(retry_opts) as ydl:
+                ydl.download([url])
+            log(f"Accesso autenticato riuscito con cookie: {browser}")
+            return True
+        except Exception as e:
+            last_err = e
+            continue
+    if last_err:
+        raise last_err
+    return False
+
+
+def _try_with_cookies_file(url, opts):
+    # Auto-detect exported cookies file in common app locations.
+    candidates = [
+        os.path.join(BASE_DIR, "cookies.txt"),
+        os.path.join(os.path.dirname(sys.argv[0]), "cookies.txt"),
+        os.path.join(os.getcwd(), "cookies.txt"),
+    ]
+    seen = set()
+    found_any_cookie_file = False
+    for cookie_path in candidates:
+        cookie_path = os.path.abspath(cookie_path)
+        if cookie_path in seen:
+            continue
+        seen.add(cookie_path)
+        if not os.path.exists(cookie_path):
+            continue
+        found_any_cookie_file = True
+
+        retry_opts = dict(opts)
+        retry_opts["cookiefile"] = cookie_path
+        try:
+            log(f"Contenuto protetto: provo file cookie ({cookie_path})...")
+            with yt_dlp.YoutubeDL(retry_opts) as ydl:
+                ydl.download([url])
+            log("Accesso autenticato riuscito con cookies.txt")
+            return True
+        except Exception:
+            continue
+    if not found_any_cookie_file:
+        log("cookies.txt non trovato. Percorsi controllati:")
+        for p in seen:
+            log(f" - {p}")
+    return False
+
+
+def _download_with_fallback(url, opts, current_mode):
+    try:
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            ydl.download([url])
+        return
+    except Exception as e:
+        if _is_auth_required_error(e):
+            try:
+                if _try_with_browser_cookies(url, opts):
+                    return
+            except Exception:
+                pass
+            try:
+                if _try_with_cookies_file(url, opts):
+                    return
+            except Exception:
+                pass
+            raise Exception(
+                "Questo contenuto richiede login. Apri TikTok nel browser, effettua l'accesso e riprova. "
+                "Se continua a fallire, esporta i cookie in un file cookies.txt e mettilo in Documents\\FreeSuperDownloader."
+            )
+
+        if not _is_unavailable_format_error(e):
+            raise
+
+        log("Formato richiesto non disponibile: riprovo con fallback compatibile...")
+        retry_opts = dict(opts)
+        if current_mode == 'mp3':
+            retry_opts['format'] = 'bestaudio/best'
+        else:
+            # Generic fallback for sites like Pinterest where strict format filters can fail.
+            retry_opts['format'] = 'best/bestvideo+bestaudio'
+            retry_opts.pop('format_sort', None)
+            retry_opts['merge_output_format'] = 'mp4'
+
+        with yt_dlp.YoutubeDL(retry_opts) as ydl:
+            ydl.download([url])
+
+
 def download_thread(url):
     try:
         install_ffmpeg()
@@ -247,8 +391,7 @@ def download_thread(url):
             # Force AAC audio if Opus is selected by fallback; keep video stream when possible.
             opts['postprocessor_args'] = ['-movflags', '+faststart', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k']
 
-        with yt_dlp.YoutubeDL(opts) as ydl:
-            ydl.download([url])
+        _download_with_fallback(url, opts, mode.get())
 
         log("Download completato")
 
@@ -304,8 +447,7 @@ def process_queue():
                 opts['format_sort'] = ['res', 'fps', 'codec:h264', 'acodec:aac', 'ext:mp4:m4a']
                 opts['postprocessor_args'] = ['-movflags', '+faststart', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k']
 
-            with yt_dlp.YoutubeDL(opts) as ydl:
-                ydl.download([url])
+            _download_with_fallback(url, opts, mode.get())
 
             log("Download completato")
 
